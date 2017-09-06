@@ -49,9 +49,11 @@ namespace Plugin {
 
             grpc::Status Ping(grpc::ServerContext* context, const rpc::Empty* request,
                             rpc::ErrReply* resp);
-
+            
             grpc::Status StreamMetrics(grpc::ServerContext* context,
-                            grpc::ServerReaderWriter<rpc::CollectReply, rpc::CollectArg>* stream);
+                                        grpc::ServerReaderWriter<rpc::CollectReply, rpc::CollectArg>* stream);
+            grpc::Status streamMetricsInt(grpc::ServerContext* context,
+                                        grpc::WriterInterface<rpc::CollectReply>* streamOut, grpc::ReaderInterface<rpc::CollectArg>* streamIn);
 
             void SetMaxCollectDuration(std::chrono::seconds maxCollectDuration) {
                 _max_collect_duration = maxCollectDuration;
@@ -67,15 +69,15 @@ namespace Plugin {
             }
 
             bool errorSend(grpc::ServerContext* context,
-                            grpc::ServerReaderWriter<rpc::CollectReply, rpc::CollectArg>* stream);
+                grpc::WriterInterface<rpc::CollectReply>* stream);
             bool metricSend(const std::string &taskID,
                             grpc::ServerContext* context,
-                            grpc::ServerReaderWriter<rpc::CollectReply, rpc::CollectArg>* stream);
+                            grpc::WriterInterface<rpc::CollectReply>* stream);
             bool streamRecv(const std::string &taskID,
                             grpc::ServerContext* context,
-                            grpc::ServerReaderWriter<rpc::CollectReply, rpc::CollectArg>* stream);
+                            grpc::ReaderInterface<rpc::CollectArg>* stream);
             bool sendReply(const std::string &taskID,
-                            grpc::ServerReaderWriter<rpc::CollectReply, rpc::CollectArg>* stream);
+                            grpc::WriterInterface<rpc::CollectReply>* stream);
             bool PutSendMetsAndErrMsg(grpc::ServerContext* context);
             
             void ErrChanClose() {

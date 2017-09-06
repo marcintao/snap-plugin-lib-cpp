@@ -32,6 +32,8 @@ using grpc::ServerContext;
 using grpc::ServerReaderWriter;
 using grpc::Status;
 using grpc::StatusCode;
+using grpc::ReaderInterface;
+using grpc::WriterInterface;
 
 using rpc::Empty;
 using rpc::ErrReply;
@@ -107,17 +109,22 @@ Status StreamCollectorImpl::Ping(ServerContext* context, const Empty* req,
 
 Status StreamCollectorImpl::StreamMetrics(ServerContext* context,
                 ServerReaderWriter<CollectReply, CollectArg>* stream) {
+    return streamMetricsInt(context, stream, stream);
+}
+
+Status StreamCollectorImpl::streamMetricsInt(ServerContext* context,
+        WriterInterface<CollectReply>* streamOut, ReaderInterface<CollectArg>* streamIn) {
     try {
         std::string task_id = "not-set";
         //TODO: Receive communicated TaskID to correlate snap events to the plugin events
         //      see PR#90 in snap-plugin-lib-go
 
         auto sendch = std::async(std::launch::async, &StreamCollectorImpl::metricSend,
-                                this, task_id, context, stream);
+                                this, task_id, context, streamOut);
         auto recvch = std::async(std::launch::async, &StreamCollectorImpl::streamRecv,
-                                this, task_id, context, stream);
+                                this, task_id, context, streamIn);
         auto errch = std::async(std::launch::async, &StreamCollectorImpl::errorSend,
-                                this, context, stream);
+                                this, context, streamOut);
 
         auto do_puts = std::async(std::launch::async, &StreamCollectorImpl::PutSendMetsAndErrMsg,
                                 this, context);
@@ -132,7 +139,7 @@ Status StreamCollectorImpl::StreamMetrics(ServerContext* context,
 
 bool StreamCollectorImpl::PutSendMetsAndErrMsg(ServerContext* context) {
     std::vector<Metric> recv_mets, send_mets;
-    while(!context->IsCancelled()) {
+    while(/*false && !context*/!context->IsCancelled()) {
         if (_stream_collector->put_mets()) {
             _sendChan.put(_stream_collector->put_metrics_out());
             _stream_collector->set_put_mets(false);
@@ -149,9 +156,9 @@ bool StreamCollectorImpl::PutSendMetsAndErrMsg(ServerContext* context) {
 }
 
 bool StreamCollectorImpl::errorSend(ServerContext* context,
-                                    ServerReaderWriter<CollectReply, CollectArg>* stream) {                            
+                                    WriterInterface<CollectReply>* stream) {                            
     try {
-        while (!context->IsCancelled()) {
+        while (/*false && !context*/!context->IsCancelled()) {
             std::string err;
             if (_errChan.get(err)) {
                 _err_reply->set_error(err);
@@ -170,10 +177,10 @@ bool StreamCollectorImpl::errorSend(ServerContext* context,
 
 bool StreamCollectorImpl::metricSend(const std::string &taskID,
                                     ServerContext* context,
-                                    ServerReaderWriter<CollectReply, CollectArg>* stream) {
+                                    WriterInterface<CollectReply>* stream) {
     try {
         std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
-        while (!context->IsCancelled()) {
+        while (/*false && !context*/!context->IsCancelled()) {
             std::vector<Metric> send_mets;
             if (_sendChan.get(send_mets)) {
                 if (!send_mets.empty()) {
@@ -211,9 +218,9 @@ bool StreamCollectorImpl::metricSend(const std::string &taskID,
 
 bool StreamCollectorImpl::streamRecv(const std::string &taskID,
                                     ServerContext* context,
-                                    ServerReaderWriter<CollectReply, CollectArg>* stream) {
+                                    ReaderInterface<CollectArg>* stream) {
     try {
-        while (!context->IsCancelled()) {
+        while (/*false && !context*/!context->IsCancelled()) {
             std::vector<Metric> recv_mets;
             CollectArg collectMets;
             stream->Read(&collectMets);
@@ -249,7 +256,7 @@ bool StreamCollectorImpl::streamRecv(const std::string &taskID,
 }
 
 bool StreamCollectorImpl::sendReply(const std::string &taskID,
-                                    ServerReaderWriter<CollectReply, CollectArg>* stream) {
+                                    WriterInterface<CollectReply>* stream) {
     try {
         if (_collect_reply.metrics_reply().metrics_size() == 0) {
             std::cout << "No metrics to send" << std::endl;

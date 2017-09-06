@@ -16,6 +16,7 @@ limitations under the License.
 #include <snap/proxy/stream_collector_proxy.h>
 #include "gmock/gmock.h"
 
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -33,6 +34,13 @@ using ::testing::Return;
 using ::testing::_;
 using ::testing::Invoke;
 using std::vector;
+using grpc::ServerReaderWriter;
+using rpc::CollectArg;
+using rpc::CollectReply;
+using grpc::ServerContext;
+using grpc::ReaderInterface;
+using grpc::WriterInterface;
+
 
 string extract_ns(const Metric &metric);
 string extract_ns(const rpc::Metric &metric);
@@ -110,4 +118,65 @@ TEST(StreamCollectorProxyFailureTest, GetConfigPolicyReportsError)
     });
     EXPECT_EQ(grpc::StatusCode::UNKNOWN, status.error_code());
     EXPECT_EQ("nothing to look at", status.error_message());
+}
+
+TEST(StreamCollectorProxySuccessTest, StreamMetricsWorks)
+{
+    MockStreamCollector mockee;
+    //ServerReaderWriter<CollectReply, CollectArg> *stream;
+    //auto stream = std::make_unique<ServerReaderWriter<CollectReply, CollectArg>>(MockCollectReplyWriter(), );
+    //streamIn = 
+    grpc::Status status;
+    vector<Metric> fakeMetricTypes{mockee.fake_metric};
+    // auto ctx = std::make_unique<grpc::ServerContext>();
+    //grpc::ServerContext ctx;
+    MockCollectArgReader streamIn;
+    MockCollectReplyWriter streamOut;
+    rpc::CollectArg fakeArg = rpc::CollectArg();
+    ServerContext ctx;
+    // ctx = MockServerContext();
+    // ctx.TryCancel();
+    auto argMaker = [&](rpc::CollectArg* out) {
+        static bool effect = true;
+        *out = fakeArg;
+        if (effect) {
+            effect = false;
+            return true;
+        }
+        return false;
+    };
+    auto putmetsReporter = [&]() {
+        static bool effect = true;
+        if (effect) {
+            effect = false;
+            return true;
+        }
+        return false;
+    };
+    auto puterrReporter = [&]() {
+        static bool effect = true;
+        if (effect) {
+            effect = false;
+            return true;
+        }
+        return false;
+    };
+    
+    //008
+    // ON_CALL(ctx, IsCancelled()).WillByDefault(Return(true));
+    // ON_CALL(mockee, put_err()).WillByDefault(Return(false));
+    // ON_CALL(mockee, put_mets()).WillByDefault(Return(false));
+    ON_CALL(mockee, put_err()).WillByDefault(Invoke(puterrReporter));
+    ON_CALL(mockee, put_mets()).WillByDefault(Invoke(putmetsReporter));
+    ON_CALL(mockee, context_cancelled()).WillByDefault(Return(true));
+    ON_CALL(streamIn, Read(_)).WillByDefault(Invoke(argMaker));
+    ON_CALL(streamOut, Write(_, _)).WillByDefault(Return(true));
+    
+    EXPECT_CALL(mockee, stream_metrics()).Times(1);
+    EXPECT_NO_THROW({
+        StreamCollectorImpl streamProxy(&mockee);
+        status = streamProxy.streamMetricsInt(ctx, &streamOut, &streamIn);
+    });
+    // ctx.TryCancel();
+    EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
 }
