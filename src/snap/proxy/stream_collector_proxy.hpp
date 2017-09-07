@@ -21,7 +21,6 @@ limitations under the License.
 #include <mutex>
 #include <condition_variable>
 
-#include "snap/proxy/stream_collector_proxy.h"
 #include "snap/rpc/plugin.pb.h"
 #include "snap/metric.h"
 
@@ -49,9 +48,10 @@ using Plugin::Metric;
 using Plugin::PluginException;
 using Plugin::Proxy::StreamCollectorImpl;
 
-StreamCollectorImpl::StreamCollectorImpl(Plugin::StreamCollectorInterface* plugin) :
+template<class Base, class Context>
+StreamCollectorImpl<Base,Context>::StreamCollectorImpl(Plugin::StreamCollectorInterface* plugin) :
                                         _stream_collector(plugin) {
-    _plugin_impl_ptr = new PluginImpl(plugin);
+    _plugin_impl_ptr = new PluginImpl<Context>(plugin);
     _metrics_reply = new rpc::MetricsReply();
     _err_reply = new rpc::ErrReply();
     _collect_reply.set_allocated_metrics_reply(_metrics_reply);
@@ -60,11 +60,13 @@ StreamCollectorImpl::StreamCollectorImpl(Plugin::StreamCollectorInterface* plugi
     _max_metrics_buffer = plugin->GetMaxMetricsBuffer();
 }
 
-StreamCollectorImpl::~StreamCollectorImpl() {
+template<class Base, class Context>
+StreamCollectorImpl<Base,Context>::~StreamCollectorImpl() {
     delete _plugin_impl_ptr;
 }
 
-Status StreamCollectorImpl::GetMetricTypes(ServerContext* context,
+template<class Base, class Context>
+Status StreamCollectorImpl<Base,Context>::GetMetricTypes(Context* context,
                                     const GetMetricTypesArg* req,
                                     MetricsReply* resp) {
     Plugin::Config cfg(const_cast<rpc::ConfigMap&>(req->config()));
@@ -83,16 +85,14 @@ Status StreamCollectorImpl::GetMetricTypes(ServerContext* context,
     }
 }
 
-Status SetConfig() {
-    return Status::OK;
-}
-
-Status StreamCollectorImpl::Kill(ServerContext* context, const KillArg* req,
+template<class Base, class Context>
+Status StreamCollectorImpl<Base,Context>::Kill(Context* context, const KillArg* req,
                         ErrReply* resp) {
     return _plugin_impl_ptr->Kill(context, req, resp);
 }
 
-Status StreamCollectorImpl::GetConfigPolicy(ServerContext* context, const Empty* req,
+template<class Base, class Context>
+Status StreamCollectorImpl<Base,Context>::GetConfigPolicy(Context* context, const Empty* req,
                                     GetConfigPolicyReply* resp) {
     try {
         return _plugin_impl_ptr->GetConfigPolicy(context, req, resp);
@@ -102,31 +102,34 @@ Status StreamCollectorImpl::GetConfigPolicy(ServerContext* context, const Empty*
     }
 }
 
-Status StreamCollectorImpl::Ping(ServerContext* context, const Empty* req,
+template<class Base, class Context>
+Status StreamCollectorImpl<Base,Context>::Ping(Context* context, const Empty* req,
                         ErrReply* resp) {
     return _plugin_impl_ptr->Ping(context, req, resp);
 }
 
-Status StreamCollectorImpl::StreamMetrics(ServerContext* context,
+template<class Base, class Context>
+Status StreamCollectorImpl<Base,Context>::StreamMetrics(Context* context,
                 ServerReaderWriter<CollectReply, CollectArg>* stream) {
     return streamMetricsInt(context, stream, stream);
 }
 
-Status StreamCollectorImpl::streamMetricsInt(ServerContext* context,
+template<class Base, class Context>
+Status StreamCollectorImpl<Base,Context>::streamMetricsInt(Context* context,
         WriterInterface<CollectReply>* streamOut, ReaderInterface<CollectArg>* streamIn) {
     try {
         std::string task_id = "not-set";
         //TODO: Receive communicated TaskID to correlate snap events to the plugin events
         //      see PR#90 in snap-plugin-lib-go
 
-        auto sendch = std::async(std::launch::async, &StreamCollectorImpl::metricSend,
+        auto sendch = std::async(std::launch::async, &StreamCollectorImpl<Base,Context>::metricSend,
                                 this, task_id, context, streamOut);
-        auto recvch = std::async(std::launch::async, &StreamCollectorImpl::streamRecv,
+        auto recvch = std::async(std::launch::async, &StreamCollectorImpl<Base,Context>::streamRecv,
                                 this, task_id, context, streamIn);
-        auto errch = std::async(std::launch::async, &StreamCollectorImpl::errorSend,
+        auto errch = std::async(std::launch::async, &StreamCollectorImpl<Base,Context>::errorSend,
                                 this, context, streamOut);
 
-        auto do_puts = std::async(std::launch::async, &StreamCollectorImpl::PutSendMetsAndErrMsg,
+        auto do_puts = std::async(std::launch::async, &StreamCollectorImpl<Base,Context>::PutSendMetsAndErrMsg,
                                 this, context);
 
         _stream_collector->stream_metrics();
@@ -137,7 +140,8 @@ Status StreamCollectorImpl::streamMetricsInt(ServerContext* context,
     }
 }
 
-bool StreamCollectorImpl::PutSendMetsAndErrMsg(ServerContext* context) {
+template<class Base, class Context>
+bool StreamCollectorImpl<Base,Context>::PutSendMetsAndErrMsg(Context* context) {
     std::vector<Metric> recv_mets, send_mets;
     while(/*false && !context*/!context->IsCancelled()) {
         if (_stream_collector->put_mets()) {
@@ -155,7 +159,8 @@ bool StreamCollectorImpl::PutSendMetsAndErrMsg(ServerContext* context) {
     _stream_collector->set_context_cancelled(true);
 }
 
-bool StreamCollectorImpl::errorSend(ServerContext* context,
+template<class Base, class Context>
+bool StreamCollectorImpl<Base,Context>::errorSend(Context* context,
                                     WriterInterface<CollectReply>* stream) {                            
     try {
         while (/*false && !context*/!context->IsCancelled()) {
@@ -175,8 +180,9 @@ bool StreamCollectorImpl::errorSend(ServerContext* context,
     }
 }
 
-bool StreamCollectorImpl::metricSend(const std::string &taskID,
-                                    ServerContext* context,
+template<class Base, class Context>
+bool StreamCollectorImpl<Base,Context>::metricSend(const std::string &taskID,
+                                    Context* context,
                                     WriterInterface<CollectReply>* stream) {
     try {
         std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
@@ -216,8 +222,9 @@ bool StreamCollectorImpl::metricSend(const std::string &taskID,
     }
 }
 
-bool StreamCollectorImpl::streamRecv(const std::string &taskID,
-                                    ServerContext* context,
+template<class Base, class Context>
+bool StreamCollectorImpl<Base,Context>::streamRecv(const std::string &taskID,
+                                    Context* context,
                                     ReaderInterface<CollectArg>* stream) {
     try {
         while (/*false && !context*/!context->IsCancelled()) {
@@ -255,7 +262,8 @@ bool StreamCollectorImpl::streamRecv(const std::string &taskID,
     }
 }
 
-bool StreamCollectorImpl::sendReply(const std::string &taskID,
+template<class Base, class Context>
+bool StreamCollectorImpl<Base,Context>::sendReply(const std::string &taskID,
                                     WriterInterface<CollectReply>* stream) {
     try {
         if (_collect_reply.metrics_reply().metrics_size() == 0) {
@@ -270,21 +278,24 @@ bool StreamCollectorImpl::sendReply(const std::string &taskID,
     }
 }
 
+template<class Base, class Context>
 template <class T>
-void StreamCollectorImpl::StreamChannel<T>::close() {
+void StreamCollectorImpl<Base,Context>::StreamChannel<T>::close() {
     std::unique_lock<std::mutex> lock(_m);
     _closed = true;
     _cv.notify_all();
 }
 
+template<class Base, class Context>
 template <class T>
-bool StreamCollectorImpl::StreamChannel<T>::is_closed() {
+bool StreamCollectorImpl<Base,Context>::StreamChannel<T>::is_closed() {
     std::unique_lock<std::mutex> lock(_m);
     return _closed;
 }
 
+template<class Base, class Context>
 template <class T>
-void StreamCollectorImpl::StreamChannel<T>::put(const T &in) {
+void StreamCollectorImpl<Base,Context>::StreamChannel<T>::put(const T &in) {
     std::unique_lock<std::mutex> lock(_m);
     
     if (_closed) throw std::logic_error("put to closed channel");
@@ -292,9 +303,9 @@ void StreamCollectorImpl::StreamChannel<T>::put(const T &in) {
     _queue.push_back(in);
     _cv.notify_one();
 }
-
+template<class Base, class Context>
 template <class T>
-bool StreamCollectorImpl::StreamChannel<T>::get(T &out, bool wait) {
+bool StreamCollectorImpl<Base,Context>::StreamChannel<T>::get(T &out, bool wait) {
     std::unique_lock<std::mutex> lock(_m);
     
     if (wait) _cv.wait(lock, [&]() { return _closed || !_queue.empty(); });

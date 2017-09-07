@@ -1,10 +1,12 @@
+#ifndef PLUGIN_PROXY_H
+#define PLUGIN_PROXY_H
 /*
 http://www.apache.org/licenses/LICENSE-2.0.txt
 Copyright 2016 Intel Corporation
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,18 +43,19 @@ namespace Plugin {
         #endif
         }
 
+        template <class Context=grpc::ServerContext>
         class PluginImpl final {
         public:
             explicit PluginImpl(Plugin::PluginInterface* plugin);
 
-            grpc::Status Ping(grpc::ServerContext* context, const rpc::Empty* req,
+            grpc::Status Ping(Context* context, const rpc::Empty* req,
                                 rpc::ErrReply* resp);
 
 
-            grpc::Status Kill(grpc::ServerContext* context, const rpc::KillArg* req,
+            grpc::Status Kill(Context* context, const rpc::KillArg* req,
                                 rpc::ErrReply* response);
 
-            grpc::Status GetConfigPolicy(grpc::ServerContext* context,
+            grpc::Status GetConfigPolicy(Context* context,
                                         const rpc::Empty* req,
                                         rpc::GetConfigPolicyReply* resp);
 
@@ -70,3 +73,7 @@ namespace Plugin {
         };
     }  // namespace Proxy
 }  // namespace Plugin
+
+#include "snap/proxy/plugin_proxy.hpp"
+
+#endif /* PLUGIN_PROXY_H */

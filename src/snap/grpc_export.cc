@@ -221,16 +221,16 @@ void Plugin::GRPCExportImpl::doConfigure() {
 
     switch (plugin->GetType()) {
         case Plugin::Collector:
-            this->service.reset(new Proxy::CollectorImpl(plugin->IsCollector()));
+            this->service.reset(new Proxy::CollectorImpl<>(plugin->IsCollector()));
             break;
         case Plugin::Processor:
-            this->service.reset(new Proxy::ProcessorImpl(plugin->IsProcessor()));
+            this->service.reset(new Proxy::ProcessorImpl<>(plugin->IsProcessor()));
             break;
         case Plugin::Publisher:
-            this->service.reset(new Proxy::PublisherImpl(plugin->IsPublisher()));
+            this->service.reset(new Proxy::PublisherImpl<>(plugin->IsPublisher()));
             break;
         case Plugin::StreamCollector:
-            this->service.reset(new Proxy::StreamCollectorImpl(plugin->IsStreamCollector()));
+            this->service.reset(new Proxy::StreamCollectorImpl<>(plugin->IsStreamCollector()));
             break;
         default:
         std::cout << "Fatal: unknown plugin type" << std::endl;

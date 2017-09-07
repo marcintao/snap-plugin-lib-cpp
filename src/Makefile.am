@@ -29,6 +29,11 @@ nobase_include_HEADERS =               \
     snap/proxy/processor_proxy.h       \
     snap/proxy/publisher_proxy.h       \
     snap/proxy/stream_collector_proxy.h \
+    snap/proxy/plugin_proxy.hpp        \
+    snap/proxy/collector_proxy.hpp     \
+    snap/proxy/processor_proxy.hpp     \
+    snap/proxy/publisher_proxy.hpp     \
+    snap/proxy/stream_collector_proxy.hpp \
     snap/rpc/plugin.pb.h               \
     snap/rpc/plugin.grpc.pb.h
 
@@ -38,11 +43,6 @@ libsnap_la_SOURCES =                    \
     snap/grpc_export.cc                 \
     snap/plugin.cc                      \
     snap/flags.cc                       \
-    snap/proxy/plugin_proxy.cc          \
-    snap/proxy/collector_proxy.cc       \
-    snap/proxy/processor_proxy.cc       \
-    snap/proxy/publisher_proxy.cc       \
-    snap/proxy/stream_collector_proxy.cc \
     snap/rpc/plugin.pb.cc               \
     snap/rpc/plugin.grpc.pb.cc
 

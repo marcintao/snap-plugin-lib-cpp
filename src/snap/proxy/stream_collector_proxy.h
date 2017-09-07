@@ -1,3 +1,5 @@
+#ifndef STREAM_COLLECTOR_PROXY_H
+#define STREAM_COLLECTOR_PROXY_H
 /*
 http://www.apache.org/licenses/LICENSE-2.0.txt
 Copyright 2017 Intel Corporation
@@ -28,31 +30,30 @@ limitations under the License.
 
 namespace Plugin {
     namespace Proxy {
-        class StreamCollectorImpl final : public rpc::StreamCollector::Service {
+        template <class ServiceBase=rpc::StreamCollector::Service, class ServiceContext=grpc::ServerContext>
+        class StreamCollectorImpl final : public ServiceBase {
         public:
             explicit StreamCollectorImpl(Plugin::StreamCollectorInterface* plugin);
 
             ~StreamCollectorImpl();
 
-            grpc::Status GetMetricTypes(grpc::ServerContext* context,
+            grpc::Status GetMetricTypes(ServiceContext* context,
                                         const rpc::GetMetricTypesArg* request,
                                         rpc::MetricsReply* resp);
 
-            grpc::Status SetConfig();
-
-            grpc::Status Kill(grpc::ServerContext* context, const rpc::KillArg* request,
+            grpc::Status Kill(ServiceContext* context, const rpc::KillArg* request,
                             rpc::ErrReply* response);
 
-            grpc::Status GetConfigPolicy(grpc::ServerContext* context,
+            grpc::Status GetConfigPolicy(ServiceContext* context,
                                         const rpc::Empty* request,
                                         rpc::GetConfigPolicyReply* resp);
 
-            grpc::Status Ping(grpc::ServerContext* context, const rpc::Empty* request,
+            grpc::Status Ping(ServiceContext* context, const rpc::Empty* request,
                             rpc::ErrReply* resp);
             
-            grpc::Status StreamMetrics(grpc::ServerContext* context,
+            grpc::Status StreamMetrics(ServiceContext* context,
                                         grpc::ServerReaderWriter<rpc::CollectReply, rpc::CollectArg>* stream);
-            grpc::Status streamMetricsInt(grpc::ServerContext* context,
+            grpc::Status streamMetricsInt(ServiceContext* context,
                                         grpc::WriterInterface<rpc::CollectReply>* streamOut, grpc::ReaderInterface<rpc::CollectArg>* streamIn);
 
             void SetMaxCollectDuration(std::chrono::seconds maxCollectDuration) {
@@ -68,17 +69,17 @@ namespace Plugin {
                 return _max_metrics_buffer; 
             }
 
-            bool errorSend(grpc::ServerContext* context,
+            bool errorSend(ServiceContext* context,
                 grpc::WriterInterface<rpc::CollectReply>* stream);
             bool metricSend(const std::string &taskID,
-                            grpc::ServerContext* context,
+                            ServiceContext* context,
                             grpc::WriterInterface<rpc::CollectReply>* stream);
             bool streamRecv(const std::string &taskID,
-                            grpc::ServerContext* context,
+                            ServiceContext* context,
                             grpc::ReaderInterface<rpc::CollectArg>* stream);
             bool sendReply(const std::string &taskID,
                             grpc::WriterInterface<rpc::CollectReply>* stream);
-            bool PutSendMetsAndErrMsg(grpc::ServerContext* context);
+            bool PutSendMetsAndErrMsg(ServiceContext* context);
             
             void ErrChanClose() {
                 _errChan.close();
@@ -138,8 +139,8 @@ namespace Plugin {
 
         private:
             Plugin::StreamCollectorInterface* _stream_collector;
-            PluginImpl* _plugin_impl_ptr;
-            grpc::ServerContext* _ctx;
+            PluginImpl<ServiceContext>* _plugin_impl_ptr;
+            ServiceContext* _ctx;
             int64_t _max_metrics_buffer;
             std::chrono::seconds _max_collect_duration;
             rpc::CollectReply _collect_reply;
@@ -152,3 +153,7 @@ namespace Plugin {
         };
     }  // namespace Proxy
 }  // namespace Plugin
+
+#include "snap/proxy/stream_collector_proxy.hpp"
+
+#endif /* STREAM_COLLECTOR_PROXY_H */

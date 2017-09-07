@@ -42,7 +42,7 @@ TEST(ProcessorProxySuccessTest, GetConfigPolicyWorks) {
     rpc::GetConfigPolicyReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-        ProcessorImpl processor(&mockee);
+        ProcessorImpl<> processor(&mockee);
         status = processor.GetConfigPolicy(nullptr, nullptr, &resp);
     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -60,7 +60,7 @@ TEST(ProcessorProxySuccessTest, ProcessWorks) {
     ON_CALL(mockee, process_metrics(_, _))
             .WillByDefault(Invoke(reporter));
     EXPECT_NO_THROW({
-        ProcessorImpl processor(&mockee);
+        ProcessorImpl<> processor(&mockee);
         rpc::PubProcArg args;
         const string data = "hop";
         mockee.fake_metric.set_data(data);
@@ -79,7 +79,7 @@ TEST(ProcessorProxySuccessTest, PingWorks) {
     rpc::ErrReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-                        ProcessorImpl processor(&mockee);
+                        ProcessorImpl<> processor(&mockee);
                         status = processor.Ping(nullptr, nullptr, &resp);
                     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -90,7 +90,7 @@ TEST(ProcessorProxySuccessTest, KillWorks) {
     rpc::ErrReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-                        ProcessorImpl processor(&mockee);
+                        ProcessorImpl<> processor(&mockee);
                         status = processor.Kill(nullptr, nullptr, &resp);
                     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -103,7 +103,7 @@ TEST(ProcessorProxyFailureTest, GetConfigPolicyReportsError) {
     rpc::GetConfigPolicyReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-                        ProcessorImpl processor(&mockee);
+                        ProcessorImpl<> processor(&mockee);
                         status = processor.GetConfigPolicy(nullptr, nullptr, &resp);
                     });
     EXPECT_EQ(grpc::StatusCode::UNKNOWN, status.error_code());
@@ -117,7 +117,7 @@ TEST(ProcessorProxySuccessTest, ProcessReportsError) {
     ON_CALL(mockee, process_metrics(_, _))
             .WillByDefault(testing::Throw(Plugin::PluginException("nothing to look at")));
     EXPECT_NO_THROW({
-                        ProcessorImpl processor(&mockee);
+                        ProcessorImpl<> processor(&mockee);
                         rpc::PubProcArg args;
                         const string data = "hop";
                         mockee.fake_metric.set_data(data);

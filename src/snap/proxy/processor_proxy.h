@@ -4,7 +4,7 @@ Copyright 2016 Intel Corporation
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,29 +22,33 @@ limitations under the License.
 
 namespace Plugin {
     namespace Proxy {
-        class ProcessorImpl final : public rpc::Processor::Service {
+        template <class Base=rpc::Processor::Service, class Context=grpc::ServerContext>
+        class ProcessorImpl final : public Base {
         public:
             explicit ProcessorImpl(Plugin::ProcessorInterface* plugin);
 
             ~ProcessorImpl();
 
-            grpc::Status Process(grpc::ServerContext* context,
+            grpc::Status Process(Context* context,
                                 const rpc::PubProcArg* req,
                                 rpc::MetricsReply* resp);
 
-            grpc::Status Kill(grpc::ServerContext* context, const rpc::KillArg* request,
+            grpc::Status Kill(Context* context, const rpc::KillArg* request,
                                 rpc::ErrReply* response);
 
-            grpc::Status GetConfigPolicy(grpc::ServerContext* context,
+            grpc::Status GetConfigPolicy(Context* context,
                                         const rpc::Empty* request,
                                         rpc::GetConfigPolicyReply* resp);
 
-            grpc::Status Ping(grpc::ServerContext* context, const rpc::Empty* request,
+            grpc::Status Ping(Context* context, const rpc::Empty* request,
                                 rpc::ErrReply* resp);
 
         private:
             Plugin::ProcessorInterface* processor;
-            PluginImpl* plugin_impl_ptr;
+            PluginImpl<Context>* plugin_impl_ptr;
         };
     }   // namespace Proxy
 }   // namespace Plugin
+
+
+#include "snap/proxy/processor_proxy.hpp"

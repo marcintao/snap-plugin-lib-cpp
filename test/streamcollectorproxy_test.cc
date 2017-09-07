@@ -45,6 +45,18 @@ using grpc::WriterInterface;
 string extract_ns(const Metric &metric);
 string extract_ns(const rpc::Metric &metric);
 
+
+class MockContext {
+public:
+    bool IsCancelled() {
+        return true;
+    }
+};
+
+class MockService {
+
+};
+
 TEST(StreamCollectorProxySuccessTest, GetConfigPolicyWorks)
 {
     MockStreamCollector mockee;
@@ -54,7 +66,7 @@ TEST(StreamCollectorProxySuccessTest, GetConfigPolicyWorks)
     grpc::Status status;
 
     EXPECT_NO_THROW({
-        StreamCollectorImpl streamCollector(&mockee);
+        StreamCollectorImpl<> streamCollector(&mockee);
         status = streamCollector.GetConfigPolicy(nullptr, nullptr, &resp);
     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -71,7 +83,7 @@ TEST(StreamCollectorProxySuccessTest, GetMetricTypesWorks)
     ON_CALL(mockee, get_metric_types(_))
         .WillByDefault(Return(fakeMetricTypes));
     EXPECT_NO_THROW({
-        StreamCollectorImpl streamCollector(&mockee);
+        StreamCollectorImpl<> streamCollector(&mockee);
         rpc::GetMetricTypesArg args;
         status = streamCollector.GetMetricTypes(nullptr, &args, &resp);
     });
@@ -87,7 +99,7 @@ TEST(StreamCollectorProxySuccessTest, PingWorks)
     rpc::ErrReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-        StreamCollectorImpl streamCollector(&mockee);
+        StreamCollectorImpl<> streamCollector(&mockee);
         status = streamCollector.Ping(nullptr, nullptr, &resp);
     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -99,7 +111,7 @@ TEST(StreamCollectorProxySuccessTest, KillWorks)
     rpc::ErrReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-        StreamCollectorImpl streamCollector(&mockee);
+        StreamCollectorImpl<> streamCollector(&mockee);
         status = streamCollector.Kill(nullptr, nullptr, &resp);
     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -113,7 +125,7 @@ TEST(StreamCollectorProxyFailureTest, GetConfigPolicyReportsError)
     rpc::GetConfigPolicyReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-        StreamCollectorImpl streamCollector(&mockee);
+        StreamCollectorImpl<> streamCollector(&mockee);
         status = streamCollector.GetConfigPolicy(nullptr, nullptr, &resp);
     });
     EXPECT_EQ(grpc::StatusCode::UNKNOWN, status.error_code());
@@ -133,7 +145,8 @@ TEST(StreamCollectorProxySuccessTest, StreamMetricsWorks)
     MockCollectArgReader streamIn;
     MockCollectReplyWriter streamOut;
     rpc::CollectArg fakeArg = rpc::CollectArg();
-    ServerContext ctx;
+    // ServerContext ctx;
+    MockContext ctx;
     // ctx = MockServerContext();
     // ctx.TryCancel();
     auto argMaker = [&](rpc::CollectArg* out) {
@@ -171,11 +184,11 @@ TEST(StreamCollectorProxySuccessTest, StreamMetricsWorks)
     ON_CALL(mockee, context_cancelled()).WillByDefault(Return(true));
     ON_CALL(streamIn, Read(_)).WillByDefault(Invoke(argMaker));
     ON_CALL(streamOut, Write(_, _)).WillByDefault(Return(true));
+    StreamCollectorImpl<MockService,MockContext> streamProxy(&mockee);
     
     EXPECT_CALL(mockee, stream_metrics()).Times(1);
     EXPECT_NO_THROW({
-        StreamCollectorImpl streamProxy(&mockee);
-        status = streamProxy.streamMetricsInt(ctx, &streamOut, &streamIn);
+        status = streamProxy.streamMetricsInt(&ctx, &streamOut, &streamIn);
     });
     // ctx.TryCancel();
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());

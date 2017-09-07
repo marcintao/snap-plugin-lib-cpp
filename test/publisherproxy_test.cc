@@ -42,7 +42,7 @@ TEST(PublisherProxySuccessTest, GetConfigPolicyWorks) {
     rpc::GetConfigPolicyReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-        PublisherImpl publisher(&mockee);
+        PublisherImpl<> publisher(&mockee);
         status = publisher.GetConfigPolicy(nullptr, nullptr, &resp);
     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -60,7 +60,7 @@ TEST(PublisherProxySuccessTest, PublishWorks) {
     ON_CALL(mockee, publish_metrics(_, _))
             .WillByDefault(Invoke(reporter));
     EXPECT_NO_THROW({
-        PublisherImpl publisher(&mockee);
+        PublisherImpl<> publisher(&mockee);
         rpc::PubProcArg args;
         const string data = "hop";
         mockee.fake_metric.set_data(data);
@@ -79,7 +79,7 @@ TEST(PublisherProxySuccessTest, PingWorks) {
     rpc::ErrReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-                        PublisherImpl publisher(&mockee);
+                        PublisherImpl<> publisher(&mockee);
                         status = publisher.Ping(nullptr, nullptr, &resp);
                     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -90,7 +90,7 @@ TEST(PublisherProxySuccessTest, KillWorks) {
     rpc::ErrReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-                        PublisherImpl publisher(&mockee);
+                        PublisherImpl<> publisher(&mockee);
                         status = publisher.Kill(nullptr, nullptr, &resp);
                     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -103,7 +103,7 @@ TEST(PublisherProxyFailureTest, GetConfigPolicyReportsError) {
     rpc::GetConfigPolicyReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-                        PublisherImpl publisher(&mockee);
+                        PublisherImpl<> publisher(&mockee);
                         status = publisher.GetConfigPolicy(nullptr, nullptr, &resp);
                     });
     EXPECT_EQ(grpc::StatusCode::UNKNOWN, status.error_code());
@@ -117,7 +117,7 @@ TEST(PublisherProxyFailureTest, PublishReportsError) {
     ON_CALL(mockee, publish_metrics(_, _))
             .WillByDefault(testing::Throw(Plugin::PluginException("nothing to look at")));
     EXPECT_NO_THROW({
-                        PublisherImpl publisher(&mockee);
+                        PublisherImpl<> publisher(&mockee);
                         rpc::PubProcArg args;
                         const string data = "hop";
                         mockee.fake_metric.set_data(data);

@@ -11,11 +11,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#pragma once
+
 #include <grpc++/grpc++.h>
 #include <vector>
 
 #include "snap/rpc/plugin.pb.h"
-#include "snap/proxy/collector_proxy.h"
 #include "snap/metric.h"
 
 using google::protobuf::RepeatedPtrField;
@@ -36,16 +37,19 @@ using rpc::MetricsReply;
 using Plugin::Metric;
 using Plugin::Proxy::CollectorImpl;
 
-CollectorImpl::CollectorImpl(Plugin::CollectorInterface* plugin) :
+template<class Base, class Context>
+CollectorImpl<Base,Context>::CollectorImpl(Plugin::CollectorInterface* plugin) :
                                 collector(plugin) {
-    plugin_impl_ptr = new PluginImpl(plugin);
+    plugin_impl_ptr = new PluginImpl<Context>(plugin);
 }
 
-CollectorImpl::~CollectorImpl() {
+template<class Base, class Context>
+CollectorImpl<Base,Context>::~CollectorImpl() {
     delete plugin_impl_ptr;
 }
 
-Status CollectorImpl::CollectMetrics(ServerContext* context,
+template<class Base, class Context>
+Status CollectorImpl<Base,Context>::CollectMetrics(Context* context,
                                     const MetricsArg* req,
                                     MetricsReply* resp) {
     std::vector<Metric> metrics;
@@ -68,7 +72,8 @@ Status CollectorImpl::CollectMetrics(ServerContext* context,
     }
 }
 
-Status CollectorImpl::GetMetricTypes(ServerContext* context,
+template<class Base, class Context>
+Status CollectorImpl<Base,Context>::GetMetricTypes(Context* context,
                                     const GetMetricTypesArg* req,
                                     MetricsReply* resp) {
     Plugin::Config cfg(const_cast<rpc::ConfigMap&>(req->config()));
@@ -88,12 +93,14 @@ Status CollectorImpl::GetMetricTypes(ServerContext* context,
     }
 }
 
-Status CollectorImpl::Kill(ServerContext* context, const KillArg* req,
+template<class Base, class Context>
+Status CollectorImpl<Base,Context>::Kill(Context* context, const KillArg* req,
                         ErrReply* resp) {
     return plugin_impl_ptr->Kill(context, req, resp);
 }
 
-Status CollectorImpl::GetConfigPolicy(ServerContext* context, const Empty* req,
+template<class Base, class Context>
+Status CollectorImpl<Base,Context>::GetConfigPolicy(Context* context, const Empty* req,
                                     GetConfigPolicyReply* resp) {
     try {
         return plugin_impl_ptr->GetConfigPolicy(context, req, resp);
@@ -103,7 +110,8 @@ Status CollectorImpl::GetConfigPolicy(ServerContext* context, const Empty* req,
     }
 }
 
-Status CollectorImpl::Ping(ServerContext* context, const Empty* req,
+template<class Base, class Context>
+Status CollectorImpl<Base,Context>::Ping(Context* context, const Empty* req,
                         ErrReply* resp) {
     return plugin_impl_ptr->Ping(context, req, resp);
 }

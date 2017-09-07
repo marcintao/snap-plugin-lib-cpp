@@ -43,7 +43,7 @@ TEST(CollectorProxySuccessTest, GetConfigPolicyWorks) {
     rpc::GetConfigPolicyReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-        CollectorImpl collector(&mockee);
+        CollectorImpl<> collector(&mockee);
         status = collector.GetConfigPolicy(nullptr, nullptr, &resp);
     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -59,7 +59,7 @@ TEST(CollectorProxySuccessTest, GetMetricTypesWorks) {
     ON_CALL(mockee, get_metric_types(_))
             .WillByDefault(Return(fakeMetricTypes));
     EXPECT_NO_THROW({
-        CollectorImpl collector(&mockee);
+        CollectorImpl<> collector(&mockee);
         rpc::GetMetricTypesArg args;
         status = collector.GetMetricTypes(nullptr, &args, &resp);
     });
@@ -88,7 +88,7 @@ TEST(CollectorProxySuccessTest, CollectMetricsWorks) {
     ON_CALL(mockee, collect_metrics(_))
             .WillByDefault(Invoke(reporter));
     EXPECT_NO_THROW({
-                        CollectorImpl collector(&mockee);
+                        CollectorImpl<> collector(&mockee);
                         rpc::MetricsArg args;
                         *args.add_metrics() = *mockee.fake_metric.get_rpc_metric_ptr();
                         status = collector.CollectMetrics(nullptr, &args, &resp);
@@ -105,7 +105,7 @@ TEST(CollectorProxySuccessTest, PingWorks) {
     rpc::ErrReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-                        CollectorImpl collector(&mockee);
+                        CollectorImpl<> collector(&mockee);
                         status = collector.Ping(nullptr, nullptr, &resp);
                     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -116,7 +116,7 @@ TEST(CollectorProxySuccessTest, KillWorks) {
     rpc::ErrReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-                        CollectorImpl collector(&mockee);
+                        CollectorImpl<> collector(&mockee);
                         status = collector.Kill(nullptr, nullptr, &resp);
                     });
     EXPECT_EQ(grpc::StatusCode::OK, status.error_code());
@@ -129,7 +129,7 @@ TEST(CollectorProxyFailureTest, GetConfigPolicyReportsError) {
     rpc::GetConfigPolicyReply resp;
     grpc::Status status;
     EXPECT_NO_THROW({
-                        CollectorImpl collector(&mockee);
+                        CollectorImpl<> collector(&mockee);
                         status = collector.GetConfigPolicy(nullptr, nullptr, &resp);
                     });
     EXPECT_EQ(grpc::StatusCode::UNKNOWN, status.error_code());
@@ -144,7 +144,7 @@ TEST(CollectorProxyFailureTest, GetMetricTypesReportsError) {
     ON_CALL(mockee, get_metric_types(_))
             .WillByDefault(testing::Throw(Plugin::PluginException("nothing to look at")));
     EXPECT_NO_THROW({
-                        CollectorImpl collector(&mockee);
+                        CollectorImpl<> collector(&mockee);
                         rpc::GetMetricTypesArg args;
                         status = collector.GetMetricTypes(nullptr, &args, &resp);
                     });
@@ -161,7 +161,7 @@ TEST(CollectorProxyFailureTest, CollectMetricsReportsError) {
     ON_CALL(mockee, collect_metrics(_))
             .WillByDefault(testing::Throw(Plugin::PluginException("nothing to look at")));
     EXPECT_NO_THROW({
-                        CollectorImpl collector(&mockee);
+                        CollectorImpl<> collector(&mockee);
                         rpc::MetricsArg args;
                         *args.add_metrics() = *mockee.fake_metric.get_rpc_metric_ptr();
                         status = collector.CollectMetrics(nullptr, &args, &resp);

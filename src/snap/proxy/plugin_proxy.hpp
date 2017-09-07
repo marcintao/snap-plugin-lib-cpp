@@ -11,11 +11,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#pragma once
+
 #include <grpc++/grpc++.h>
 #include <iostream>
 #include <thread>
 
-#include "snap/proxy/plugin_proxy.h"
 #include "snap/rpc/plugin.pb.h"
 
 using grpc::Server;
@@ -29,9 +30,11 @@ using rpc::GetConfigPolicyReply;
 
 using Plugin::Proxy::PluginImpl;
 
-PluginImpl::PluginImpl(Plugin::PluginInterface* plugin) : plugin(plugin) {}
+template <class Context>
+PluginImpl<Context>::PluginImpl(Plugin::PluginInterface* plugin) : plugin(plugin) {}
 
-Status PluginImpl::Ping(ServerContext* context, const Empty* req,
+template <class Context>
+Status PluginImpl<Context>::Ping(Context* context, const Empty* req,
                         ErrReply* resp) {
     _lastPing = std::chrono::system_clock::now();
     // Change to log
@@ -39,18 +42,21 @@ Status PluginImpl::Ping(ServerContext* context, const Empty* req,
     return Status::OK;
 }
 
-Status PluginImpl::Kill(ServerContext* context, const KillArg* req,
+template <class Context>
+Status PluginImpl<Context>::Kill(Context* context, const KillArg* req,
                         ErrReply* resp) {
     return Status::OK;
 }
 
-Status PluginImpl::GetConfigPolicy(ServerContext* context, const Empty* req,
+template <class Context>
+Status PluginImpl<Context>::GetConfigPolicy(Context* context, const Empty* req,
                                    GetConfigPolicyReply* resp) {
     *resp = plugin->get_config_policy();
     return Status::OK;
 }
 
-void PluginImpl::HeartbeatWatch() {
+template <class Context>
+void PluginImpl<Context>::HeartbeatWatch() {
     _lastPing = std::chrono::system_clock::now();
     std::cout << "Heartbeat started" << std::endl;
     int count = 0;
